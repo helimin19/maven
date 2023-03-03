@@ -1,2 +1,2 @@
-# maven
-私有maven仓库
+# 私有maven仓库
+
