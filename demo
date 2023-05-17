@@ -1,0 +1,179 @@
+ @Override
+    public boolean onJsConfirm(WebView webView, String url, String message, JsResult jsResult) {
+        // 可以弹框或进行其它处理，但一定要回调result.confirm或者cancel
+        BridgeParameterSync parameter = BridgeParameterUtil.parse(message);
+        if (parameter == null) {
+            // 弹窗
+            ConfirmDialog confirmDialog = ConfirmDialog.with(webView.getContext()).setContent(message);
+            confirmDialog.setCallback(new ConfirmDialogCallback() {
+                @Override
+                public void cancel() {
+                    jsResult.cancel();
+                }
+
+                @Override
+                public void confirm() {
+                    jsResult.confirm();
+                }
+            });
+            confirmDialog.show();
+        } else {
+            // jsapi处理
+            if (parameter.getAction().equals("checkPermission")) {
+                // 检测权限
+                CheckPermission checkPermission = new CheckPermission();
+                checkPermission.run((WebViewActivity) webView.getContext(), parameter, result -> {
+                    if (result) {
+                        jsResult.confirm();
+                    } else {
+                        jsResult.cancel();
+                    }
+                });
+            } else {
+                jsResult.cancel();
+            }
+        }
+        return true;
+    }
+
+    @Override
+    public boolean onJsPrompt(WebView webView, String url, String message, String defaultValue, JsPromptResult jsPromptResult) {
+        // 可以弹框或进行其它处理，但一定要回调result.confirm或者cancel，confirm可以将用户输入作为参数
+        BridgeParameterSync parameter = BridgeParameterUtil.parse(message);
+        if (parameter == null) {
+            // 弹窗
+            // 需要实现
+        } else {
+            // jsapi处理
+            if (parameter.getAction().equals("requestHeaders")) {
+                // 取得统一请求头
+                Map<String, String> headers = RetrofitClient.with().getHttpProvider().getRequestHeaders(webView.getContext());
+                jsPromptResult.confirm(new GsonBuilder().create().toJson(headers));
+            } else if (parameter.getAction().equals("refreshToken")) {
+                // 刷新Token
+                try {
+                    RefreshTokenManager.instance().update(webView.getContext());
+                    Map<String, String> map = new HashMap<>();
+                    map.put(AuthManager.instance().tokenKey(), AuthManager.instance().token(webView.getContext()));
+                    jsPromptResult.confirm(new GsonBuilder().create().toJson(map));
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            } else {
+                jsPromptResult.cancel();
+            }
+        }
+        return true;
+    }
+
+    @Override
+    public void onGeolocationPermissionsShowPrompt(String origin, com.tencent.smtt.export.external.interfaces.GeolocationPermissionsCallback geolocationPermissionsCallback) {
+        this.activity.requestPermission(
+                new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION}, result -> {
+                    geolocationPermissionsCallback.invoke(origin, result[0].isResult(), false);
+                }
+            );
+    }
+
+    @Override
+    public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> valueCallback, FileChooserParams fileChooserParams) {
+        if (fileChooserParams.isCaptureEnabled()) {
+            // 打开相机/录音/录像
+            if (existsInAcceptTypes(fileChooserParams.getAcceptTypes(), "video/*")) {
+                // 录像
+                ActivityUtil.openSystemVideo((BaseActivity) webView.getContext(), 0, 0, -1, (uri, result) -> {
+                    if (result.getResultCode() != Activity.RESULT_OK) {
+                        valueCallback.onReceiveValue(null);
+                        return;
+                    }
+                    valueCallback.onReceiveValue(new Uri[]{uri});
+                });
+            } else if (existsInAcceptTypes(fileChooserParams.getAcceptTypes(), "audio/*")) {
+                // 录音
+                ActivityUtil.openSystemAudio((BaseActivity) webView.getContext(), (result) -> {
+                    if (result.getResultCode() != Activity.RESULT_OK) {
+                        valueCallback.onReceiveValue(null);
+                        return;
+                    }
+                    valueCallback.onReceiveValue(new Uri[]{ result.getData().getData() });
+                });
+            } else {
+                // 相机
+                ActivityUtil.openSystemCamera((BaseActivity) webView.getContext(), (uri, result) -> {
+                    if (result.getResultCode() != Activity.RESULT_OK) {
+                        valueCallback.onReceiveValue(null);
+                        return;
+                    }
+                    valueCallback.onReceiveValue(new Uri[]{uri});
+                });
+            }
+            return true;
+        }
+
+        // 相册与文件选择
+        if (existsInAcceptTypes(fileChooserParams.getAcceptTypes(), "image/*")) {
+            // 相册
+            ActivityUtil.openSystemAlbum((BaseActivity) webView.getContext(), (result) -> {
+                if (result.getResultCode() != Activity.RESULT_OK) {
+                    valueCallback.onReceiveValue(null);
+                    return;
+                }
+                valueCallback.onReceiveValue(new Uri[]{ result.getData().getData() });
+            });
+            return true;
+        }
+
+        // 打开文件选择
+        Intent intent = fileChooserParams.createIntent();
+        if (fileChooserParams.getAcceptTypes() == null || fileChooserParams.getAcceptTypes().length == 0 || TextUtils.isEmpty(fileChooserParams.getAcceptTypes()[0])) {
+            intent.setType("*/*");
+        }
+        ((BaseActivity)webView.getContext()).startActivityForResult(intent, result -> {
+            if (result.getResultCode() != Activity.RESULT_OK || result.getData() == null) {
+                valueCallback.onReceiveValue(null);
+                return;
+            }
+            valueCallback.onReceiveValue(new Uri[] { result.getData().getData() });
+        });
+        return true;
+    }
+
+
+    // 请求全屏
+    @Override
+    public void onShowCustomView(View view, IX5WebChromeClient.CustomViewCallback callback) {
+
+    }
+
+    // 退出全屏
+    @Override
+    public void onHideCustomView() {
+
+    }
+
+    // 设置client监听页面Favicon回调
+    @Override
+    public void onReceivedIcon(WebView view, android.graphics.Bitmap icon){
+        // 这里对favicon进行操作
+    }
+
+    /**
+     * AcceptTypes中是否存在指定类型
+     * @param types
+     * @param type
+     * @return
+     */
+    private boolean existsInAcceptTypes(String[] types, @NonNull String type) {
+        if (types == null || types.length == 0) {
+            return false;
+        }
+
+        boolean res = false;
+        for (String it : types) {
+            if (type.equalsIgnoreCase(it)) {
+                res = true;
+                break;
+            }
+        }
+        return res;
+    }
