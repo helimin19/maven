@@ -177,3 +177,37 @@
         }
         return res;
     }
+
+
+(function() {
+    try {
+        const inputs = document.getElementsByTagName("input");
+        for(let i = 0; i < inputs.length; i++) {
+            inputs[i].addEventListener("click", (e) => {
+                const input = e.srcElement || e.input;
+                if (input.type && input.type === "file") {
+                    const message = {};
+                    Reflect.set(message, "action", "checkPermission");
+                    Reflect.set(message, "data", {});
+                    Reflect.set(Reflect.get(message, "data"), "id", input.name);
+                    Reflect.set(Reflect.get(message, "data"), "title", input.alt);
+                    Reflect.set(Reflect.get(message, "data"), "description", input.placeholder);
+                    const accept = input.accept.toLowerCase() || "";
+                    if (accept.indexOf("video/") >= 0 || accept.indexOf("image/") >= 0) {
+                        Reflect.set(Reflect.get(message, "data"), "code", "CAMERA");
+                    } else if (accept.indexOf("audio/") >= 0) {
+                        Reflect.set(Reflect.get(message, "data"), "code", "MICROPHONE");
+                    } else {
+                        Reflect.set(Reflect.get(message, "data"), "code", "STORAGE");
+                    }
+                    if (!window.confirm(JSON.stringify(message))) {
+                        e.preventDefault();
+                    }
+                }
+            });
+        }
+    } catch(e) {
+        alert(e.message)
+    }
+})();
+
