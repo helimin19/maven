@@ -1,0 +1,208 @@
+<html>
+<head>
+    <meta content="text/html; charset=utf-8" http-equiv="content-type">
+    <meta http-equiv="keywords" content="测试">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <script type="text/javascript" src="./rest/jsapi.js"></script>
+    <title>
+        webview
+    </title>
+</head>
+
+<body>
+
+<input type="button" value="获取当前位置-H5" onclick="onReviceCurrentLocation()" />
+<div id="currentLocation">当前位置: </div>
+<br/><hr/>
+
+<input type="button" value="获取当前位置-JSAPI" onclick="onCurrentLocation()" />
+<br/><hr/>
+
+<input type="button" value="监听位置-H5" onclick="onWatchLocation()" />
+<div id="watchLocation"> </div>
+<br/><hr/>
+
+<input type="button" value="监听位置-JSAPI" onclick="jsApiWatchLocation()" />
+<input type="button" value="停止监听位置-JSAPI" onclick="jsApiclearWatchLocation()" />
+<div id="watchLocation1"> </div>
+<br/><hr/>
+
+<input type="button" value="设置标题栏右边-JSAPI" onclick="setTitleRight()" />
+<br/><hr/>
+<input type="button" value="设置标题栏左边-JSAPI" onclick="setTitleLeft()" />
+<br/><hr/>
+
+<input type="file" name="aa" /><br/><br/>
+
+<input type="file" accept="video/*" name="dd"  value="选择视频文件" /><br/><br/>
+<input type="file" accept="text/*" name="cc"  value="选择文本文件" /><br/><br/>
+
+系统相册选择相片:
+<input id="file0" type="file" accept="image/*" value="选择图片文件" name="权限ID-01" alt="权限标题" placeholder="我将需要使用您的相册存储权限"  /><br/><br/>
+<img  id="image0" width="100" height="100" /><br/><hr/>
+
+调用系统相机:
+<input id="file1" type="file" accept="image/*" capture="true" name="权限ID-11" alt="权限标题" placeholder="我将需要使用您的系统相机" /><br/><br/>
+<img  id="image1" width="100" height="100" /><br/><hr/>
+
+调用系统录像:
+<input id="file2" type="file" accept="video/*" capture="true" name="权限ID-21" alt="权限标题" placeholder="我将需要使用您的系统录像" /><br/><br/>
+<video id="video1" width="200" height="150" controls>
+</video>
+<br/><hr/>
+
+调用系统录音:
+<input id="file3" type="file" accept="audio/*" capture="true" name="权限ID-31" alt="权限标题" placeholder="我将需要使用您的系统录音" /><br/><br/>
+<audio id="audio1" controls />
+<br/><hr/>
+
+<script>
+        window.nocc.setAppId("demo1");
+        function setTitleRight() {
+            window.nocc.setTitleRight({
+                            rights: [{
+                                id: "icon1",
+                                imageUrl: "http://192.168.137.1:8080/examples/me.jpg",
+                                click: "window.btn1_onclick"
+                            }, {
+                                id: "btn2",
+                                text: "确定",
+                                click: "window.btn2_onclick"
+                            }]
+                        }).then(res => {
+                            console.log(res)
+                        })
+                        .catch(err => {
+                            console.log(err)
+                        });
+        }
+        function btn1_onclick(id) {
+            alert("点击了取消:" + id);
+        }
+        function btn2_onclick(id) {
+            alert("点击了确定:" + id);
+        }
+        function back_onclick(id) {
+            alert("关闭");
+            window.nocc.close().then(res => {});
+        }
+        function setTitleLeft() {
+            window.nocc.setTitleLeft({
+                            lefts: [{
+                                id: "back",
+                                resName: "hlm_titlebar_back",
+                                click: "window.back_onclick"
+                            }, {
+                                id: "btn2",
+                                text: "确定",
+                                click: "window.btn2_onclick"
+                            }]
+                        }).then(res => {
+                            console.log(res)
+                        })
+                        .catch(err => {
+                            console.log(err)
+                        });
+        }
+
+
+        document.getElementById("file0").addEventListener("change", function (e) {
+            const url = window.URL || window.webkitURL;
+            document.getElementById("image0").src = url.createObjectURL(this.files[0]);
+        });
+
+        document.getElementById("file1").addEventListener("change", function (e) {
+            const url = window.URL || window.webkitURL;
+            document.getElementById("image1").src = url.createObjectURL(this.files[0]);
+        });
+
+        document.getElementById("file2").addEventListener("change", function (e) {
+            const url = window.URL || window.webkitURL;
+            document.getElementById("video1").src = url.createObjectURL(this.files[0]);
+        });
+
+        document.getElementById("file3").addEventListener("change", function (e) {
+            const url = window.URL || window.webkitURL;
+            document.getElementById("audio1").src = url.createObjectURL(this.files[0]);
+        });
+
+
+        function onReviceCurrentLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(function (position) {
+                    latitude = position.coords.latitude; // 获取纬度
+                    longitude = position.coords.longitude; // 获取经度
+                    document.getElementById("currentLocation").innerHTML = "当前位置:" + longitude + "," + latitude;
+                });
+            } else {
+                alert("不支持定位功能");
+            }
+        }
+
+        function onCurrentLocation() {
+            window.nocc.currentLocation({
+                            timeout: 0,
+                            permission: {
+                                id: "权限ID",
+                                title: "定位权限",
+                                description: "我需要使用定位服务."
+                            }
+                        }).then(res => {
+                             alert(JSON.stringify(res));
+                        })
+                        .catch(err => {
+                              alert(JSON.stringify(err));
+                        });
+        }
+
+        function jsApiWatchLocation() {
+            window.nocc.watchLocation({
+                            timeout: 0,
+                            permission: {
+                                id: "权限ID",
+                                title: "定位权限",
+                                description: "我需要使用定位服务."
+                            }
+                        }).then(res => {
+                             document.getElementById("watchLocation1").innerHTML = document.getElementById("watchLocation1").innerHTML + "<br/>" + JSON.stringify(res);
+                        })
+                        .catch(err => {
+                              alert(JSON.stringify(err));
+                        });
+
+        }
+
+        function jsApiclearWatchLocation() {
+            window.nocc.clearLocation().then(res => {
+                             alert(JSON.stringify(res));
+                        })
+                        .catch(err => {
+                              alert(JSON.stringify(err));
+                        });
+        }
+
+        function onWatchLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.watchPosition( // 监听定位变更
+                    function (pos) { // 成功回调函数，接受一个地理位置的对象作为参数（网页需配置https）
+                        document.getElementById("watchLocation").innerHTML = document.getElementById("watchLocation").innerHTML + "<br/>" + pos.coords.longitude + "," + pos.coords.latitude;
+                    },
+                    function (error) { // 出错时取百度地图定位（需引入引入百度地图API）
+                        document.getElementById("watchLocation").innerHTML = document.getElementById("watchLocation").innerHTML + "<br/>" + error.message;
+                    },
+                    {
+                        enableHighAccuracy: true, // 是否获取高精度结果
+                        timeout: 1000, // 超时,毫秒
+                        maximumAge: 0 // 可以接受多少毫秒的缓存位置
+                    });
+            } else {
+                alert("不支持定位功能");
+            }
+        }
+
+    </script>
+
+
+</body>
+
+</html>
